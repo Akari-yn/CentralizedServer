@@ -50,6 +50,9 @@ type Callback<T...> = (T...) -> ()
 -- A list of callback functions.
 type Callbacks<T...> = { Callback<T...> }
 
+-- A function that disconnects a callback or releases a lock.
+type DisconnectFunction = () -> ()
+
 type BaseMessage = {
 	-- Action: string, -- The type of action this message represents.
 	InstanceId: string, -- The unique identifier for the queue instance.
@@ -156,9 +159,6 @@ type BaseProperties = {
 	-- Whether the queue should automatically manage its lifecycle (e.g., start processing threads).
 	AutomateLifecycle: boolean,
 }
-
--- A function that disconnects a callback or releases a lock.
-type DisconnectFunction = () -> ()
 
 -- The base interface for all queue objects.
 type BaseQueue<self, T> = {
