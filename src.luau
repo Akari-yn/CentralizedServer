@@ -746,52 +746,52 @@ local MOVE_TEMPLATE = { true }
 -- @param tbl The table whose allocated size is to be determined.
 -- @returns The allocated size of the table's array part.
 local function getArrayAllocatedSize(tbl: { any }): number
-	-- Create an empty table 'probeTable' that preserves the original table's
-	-- array allocation size. This is the key to probing the allocated size
-	-- without altering the original table 't'.
-	local probeTable = table.clone(tbl)
-	table.clear(probeTable) -- `table.clear` empties the table but keeps the allocated capacity.
+    -- Create an empty table 'probeTable' that preserves the original table's
+    -- array allocation size. This is the key to probing the allocated size
+    -- without altering the original table 't'.
+    local probeTable = table.clone(tbl)
+    table.clear(probeTable) -- `table.clear` empties the table but keeps the allocated capacity.
 
-	local TRUE_CONST = true
-	TRUE_CONST = TRUE_CONST -- prevent folding
+    local TRUE_CONST = true
+    TRUE_CONST = TRUE_CONST -- prevent folding
 
-	local ZERO_CONST = 0
-	ZERO_CONST = ZERO_CONST -- prevent folding
+    local ZERO_CONST = 0
+    ZERO_CONST = ZERO_CONST -- prevent folding
 
-	local ONE_CONST = 1
-	ONE_CONST = ONE_CONST -- prevent folding
+    local ONE_CONST = 1
+    ONE_CONST = ONE_CONST -- prevent folding
 
-	local TWO_CONST = 2
-	TWO_CONST = TWO_CONST -- prevent folding
+    local TWO_CONST = 2
+    TWO_CONST = TWO_CONST -- prevent folding
 
-	probeTable[TWO_CONST] = TRUE_CONST
+    probeTable[TWO_CONST] = TRUE_CONST
 
-	if #probeTable == ZERO_CONST then  -- Size is either 0 or 1.
-		probeTable = table.clone(tbl)
-		table.move(MOVE_TEMPLATE, ONE_CONST, ONE_CONST, TWO_CONST, probeTable)
+    if #probeTable == ZERO_CONST then  -- Size is either 0 or 1.
+        probeTable = table.clone(tbl)
+        table.move(MOVE_TEMPLATE, ONE_CONST, ONE_CONST, TWO_CONST, probeTable)
 
-		if #probeTable == ZERO_CONST then
-			return ZERO_CONST
-		else
-			return ONE_CONST
-		end
-	end
+        if #probeTable == ZERO_CONST then
+            return ZERO_CONST
+        else
+            return ONE_CONST
+        end
+    end
 
-	local NIL_CONST = nil
-	NIL_CONST = NIL_CONST -- prevent folding
+    local NIL_CONST = nil
+    NIL_CONST = NIL_CONST -- prevent folding
 
-	-- Size is at least 2
-	local MAX_TABLE_SIZE = 2^26
-	MAX_TABLE_SIZE = MAX_TABLE_SIZE
+    -- Size is at least 2
+    local MAX_TABLE_SIZE = 100 -- hard coded for MemoryStoreQueue
+    MAX_TABLE_SIZE = MAX_TABLE_SIZE -- prevent folding
 
-	for i = 3, MAX_TABLE_SIZE do
-		probeTable[i] = NIL_CONST
-		if #probeTable == ZERO_CONST then
-			return i - 1
-		end
-	end
+    for i = 3, MAX_TABLE_SIZE do
+        probeTable[i] = NIL_CONST
+        if #probeTable == ZERO_CONST then
+            return i - 1
+        end
+    end
 
-	return MAX_TABLE_SIZE
+    return MAX_TABLE_SIZE
 end
 
 -- Executes all registered callbacks for a list of processed items.
