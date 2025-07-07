@@ -744,7 +744,7 @@ local MOVE_TEMPLATE = { true }
 -- This function determines the allocated size of a Luau table's array part, not
 -- just the number of items currently in the table (which `#t` would give).
 -- @param tbl The table whose allocated size is to be determined.
--- @return The allocated size of the table's array part.
+-- @returns The allocated size of the table's array part.
 local function getArrayAllocatedSize(tbl: { any}): number
 	-- Create an empty table 'probeTable' that preserves the original table's
 	-- array allocation size. This is the key to probing the allocated size
