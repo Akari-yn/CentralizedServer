@@ -739,69 +739,70 @@ local function checkInit(init: boolean, level: number?)
 	if not init then error("Queue is not initialized. Call .Init() first.", currentLevel + 1) end
 end
 
+local MOVE_TEMPLATE = { true }
+
 -- This function determines the allocated size of a Luau table's array part, not
 -- just the number of items currently in the table (which `#t` would give).
 -- @param tbl The table whose allocated size is to be determined.
--- @returns The allocated size of the table's array part.
+-- @return The allocated size of the table's array part.
 local function getArrayAllocatedSize(tbl: { any}): number
-    -- Create an empty table 'template' that preserves the original table's
-    -- array allocation size. This is the key to probing the allocated size
-    -- without altering the original table 't'.
-    local template = table.clone(tbl)
-    table.clear(template) -- `table.clear` empties the table but keeps the allocated capacity.
-
-	-- How this work is quite technical so I won't go into details.
+	-- Create an empty table 'probeTable' that preserves the original table's
+	-- array allocation size. This is the key to probing the allocated size
+	-- without altering the original table 't'.
+	local probeTable = table.clone(tbl)
+	table.clear(probeTable) -- `table.clear` empties the table but keeps the allocated capacity.
 
 	local TRUE_CONST = true
 	TRUE_CONST = TRUE_CONST -- prevent folding
 
-    local probeTable = table.clone(template)
-    local currentIndex = 2
-    probeTable[currentIndex] = TRUE_CONST
+	local ZERO_CONST = 0
+	ZERO_CONST = ZERO_CONST -- prevent folding
 
-    if #probeTable == 0 then  -- Size is either 0 or 1.
-        probeTable = table.clone(template)
+	local ONE_CONST = 1
+	ONE_CONST = ONE_CONST -- prevent folding
 
-        table.move({}, 1, 1, 2, probeTable)
-        probeTable[2] = TRUE_CONST
+	local TWO_CONST = 2
+	TWO_CONST = TWO_CONST -- prevent folding
 
-        if #probeTable == 0 then
-            return 0
-        else
-            return 1
-        end
-    end
+	probeTable[TWO_CONST] = TRUE_CONST
+
+	if #probeTable == ZERO_CONST then  -- Size is either 0 or 1.
+		probeTable = table.clone(tbl)
+		table.move(MOVE_TEMPLATE, ONE_CONST, ONE_CONST, TWO_CONST, probeTable)
+
+		if #probeTable == ZERO_CONST then
+			return ZERO_CONST
+		else
+			return ONE_CONST
+		end
+	end
 
 	local NIL_CONST = nil
 	NIL_CONST = NIL_CONST -- prevent folding
 
-    -- Size is at least 2
-    template = probeTable
-    probeTable = table.clone(template)
+	-- Size is at least 2
 
-    -- Finding Upper Bound
-    repeat
-        currentIndex = currentIndex * 2
-        probeTable[currentIndex] = NIL_CONST
-    until #probeTable == 0
+	--[[
+		-- Hash check kinda expensive, not doing that
+		local tempProbeTable = table.clone(probeTable)
 
-    -- Binary Search to Find the Exact Size (currentIndex / 2 < size < currentIndex)
-    local low = currentIndex / 2
-    probeTable = table.clone(template)
+		tempProbeTable[''] = NIL_CONST
+		if #tempProbeTable ~= ONE_CONST then -- Table contains hash part
+			return -1
+		end
+	]]
 
-    while low + 1 < currentIndex do
-        local mid = (low + currentIndex) // 2
-        probeTable[mid] = NIL_CONST
+	local MAX_TABLE_SIZE = 2^26
+	MAX_TABLE_SIZE = MAX_TABLE_SIZE
 
-        if #probeTable == 0 then
-            currentIndex = mid
-            probeTable = table.clone(template)
-        else
-            low = mid
-        end
-    end
+	for i = 3, MAX_TABLE_SIZE do
+		probeTable[i] = NIL_CONST
+		if #probeTable == ZERO_CONST then
+			return i - 1
+		end
+	end
 
-    return low
+	return MAX_TABLE_SIZE
 end
 
 -- Executes all registered callbacks for a list of processed items.
