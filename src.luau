@@ -781,17 +781,6 @@ local function getArrayAllocatedSize(tbl: { any}): number
 	NIL_CONST = NIL_CONST -- prevent folding
 
 	-- Size is at least 2
-
-	--[[
-		-- Hash check kinda expensive, not doing that
-		local tempProbeTable = table.clone(probeTable)
-
-		tempProbeTable[''] = NIL_CONST
-		if #tempProbeTable ~= ONE_CONST then -- Table contains hash part
-			return -1
-		end
-	]]
-
 	local MAX_TABLE_SIZE = 2^26
 	MAX_TABLE_SIZE = MAX_TABLE_SIZE
 
