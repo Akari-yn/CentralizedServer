@@ -740,58 +740,85 @@ local function checkInit(init: boolean, level: number?)
 end
 
 local MOVE_TEMPLATE = { true }
-
 -- This function determines the allocated size of a Luau table's array part, not
 -- just the number of items currently in the table (which `#t` would give).
 -- @param tbl The table whose allocated size is to be determined.
--- @returns The allocated size of the table's array part.
-local function getArrayAllocatedSize(tbl: { any }): number
-    -- Create an empty table 'probeTable' that preserves the original table's
-    -- array allocation size. This is the key to probing the allocated size
-    -- without altering the original table 't'.
-    local probeTable = table.clone(tbl)
-    table.clear(probeTable) -- `table.clear` empties the table but keeps the allocated capacity.
+-- @return The allocated size of the table's array part.
+local function getArrayAllocatedSize(tbl: { any}): number
+	-- Create an empty table 'probeTable' that preserves the original table's
+	-- array allocation size. This is the key to probing the allocated size
+	-- without altering the original table 't'.
+	local probeTable = table.clone(tbl)
+	table.clear(probeTable) -- `table.clear` empties the table but keeps the allocated capacity.
 
-    local TRUE_CONST = true
-    TRUE_CONST = TRUE_CONST -- prevent folding
+	local TRUE_CONST = true
+	TRUE_CONST = TRUE_CONST -- prevent folding
 
-    local ZERO_CONST = 0
-    ZERO_CONST = ZERO_CONST -- prevent folding
+	local ZERO_CONST = 0
+	ZERO_CONST = ZERO_CONST -- prevent folding
 
-    local ONE_CONST = 1
-    ONE_CONST = ONE_CONST -- prevent folding
+	local ONE_CONST = 1
+	ONE_CONST = ONE_CONST -- prevent folding
 
-    local TWO_CONST = 2
-    TWO_CONST = TWO_CONST -- prevent folding
+	local TWO_CONST = 2
+	TWO_CONST = TWO_CONST -- prevent folding
 
-    probeTable[TWO_CONST] = TRUE_CONST
+	probeTable[2] = TRUE_CONST
 
-    if #probeTable == ZERO_CONST then  -- Size is either 0 or 1.
-        probeTable = table.clone(tbl)
-        table.move(MOVE_TEMPLATE, ONE_CONST, ONE_CONST, TWO_CONST, probeTable)
+	if #probeTable == ZERO_CONST then  -- Size is either 0 or 1.
+		probeTable = table.clone(tbl)
+		table.move(MOVE_TEMPLATE, ONE_CONST, ONE_CONST, TWO_CONST, probeTable)
 
-        if #probeTable == ZERO_CONST then
-            return ZERO_CONST
-        else
-            return ONE_CONST
-        end
-    end
+		if #probeTable == ZERO_CONST then
+			return ZERO_CONST
+		else
+			return ONE_CONST
+		end
+	end
 
-    local NIL_CONST = nil
-    NIL_CONST = NIL_CONST -- prevent folding
+	local NIL_CONST = nil
+	NIL_CONST = NIL_CONST -- prevent folding
 
-    -- Size is at least 2
-    local MAX_TABLE_SIZE = 100 -- hard coded for MemoryStoreQueue
-    MAX_TABLE_SIZE = MAX_TABLE_SIZE -- prevent folding
+	probeTable[3] = TRUE_CONST
+	if #probeTable == ZERO_CONST then
+		return TWO_CONST
+	end
 
-    for i = 3, MAX_TABLE_SIZE do
-        probeTable[i] = NIL_CONST
-        if #probeTable == ZERO_CONST then
-            return i - 1
-        end
-    end
+	probeTable[2] = NIL_CONST
 
-    return MAX_TABLE_SIZE
+	-- Size is at least 3
+	local probeIndex = 3
+
+	while true do
+		if probeIndex > 2^12 then
+			table.move(probeTable, ONE_CONST, ONE_CONST, probeIndex + 1)
+		else
+			probeTable[probeIndex + 1] = NIL_CONST
+		end
+		if #probeTable == ZERO_CONST then
+			return probeIndex
+		end
+
+		probeTable[probeIndex] = NIL_CONST
+		probeIndex = (probeIndex - 1) * 2
+		probeTable[probeIndex] = TRUE_CONST
+
+		if #probeTable == probeIndex then
+			continue
+		end
+
+		probeTable[probeIndex] = NIL_CONST
+		probeIndex = probeIndex + 1
+		probeTable[probeIndex] = TRUE_CONST
+
+		if #probeTable == probeIndex then
+			continue
+		end
+
+		probeTable[probeIndex] = NIL_CONST
+		probeIndex = probeIndex + 1
+		probeTable[probeIndex] = TRUE_CONST
+	end
 end
 
 -- Executes all registered callbacks for a list of processed items.
