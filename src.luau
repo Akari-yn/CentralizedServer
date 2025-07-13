@@ -4,7 +4,7 @@
     Centralized Server & Distributed Queue System
     ---------------------------------------------
     Author: @akari_yn
-    Date: 2024-07-03 (Last Updated)
+    Date: 2025-07-03 (Last Updated)
     Version: 1.3.1
 
     Description:
