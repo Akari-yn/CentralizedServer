@@ -158,6 +158,9 @@ type BaseProperties = {
 
 	-- Whether the queue should automatically manage its lifecycle (e.g., start processing threads).
 	AutomateLifecycle: boolean,
+
+	-- Whether the object has been destroyed.
+	IsDestroyed: boolean,
 }
 
 -- The base interface for all queue objects.
@@ -744,7 +747,7 @@ local MOVE_TEMPLATE = { true }
 -- just the number of items currently in the table (which `#t` would give).
 -- @param tbl The table whose allocated size is to be determined.
 -- @return The allocated size of the table's array part.
-local function getArrayAllocatedSize(tbl: { any}): number
+local function getArrayAllocatedSize(tbl: { any }): number
 	-- Create an empty table 'probeTable' that preserves the original table's
 	-- array allocation size. This is the key to probing the allocated size
 	-- without altering the original table 't'.
@@ -765,7 +768,7 @@ local function getArrayAllocatedSize(tbl: { any}): number
 
 	probeTable[2] = TRUE_CONST
 
-	if #probeTable == ZERO_CONST then  -- Size is either 0 or 1.
+	if #probeTable == ZERO_CONST then -- Size is either 0 or 1.
 		probeTable = table.clone(tbl)
 		table.move(MOVE_TEMPLATE, ONE_CONST, ONE_CONST, TWO_CONST, probeTable)
 
@@ -780,9 +783,7 @@ local function getArrayAllocatedSize(tbl: { any}): number
 	NIL_CONST = NIL_CONST -- prevent folding
 
 	probeTable[3] = TRUE_CONST
-	if #probeTable == ZERO_CONST then
-		return TWO_CONST
-	end
+	if #probeTable == ZERO_CONST then return TWO_CONST end
 
 	probeTable[2] = NIL_CONST
 
@@ -790,30 +791,24 @@ local function getArrayAllocatedSize(tbl: { any}): number
 	local probeIndex = 3
 
 	while true do
-		if probeIndex > 2^12 then
+		if probeIndex > 2 ^ 12 then
 			table.move(probeTable, ONE_CONST, ONE_CONST, probeIndex + 1)
 		else
 			probeTable[probeIndex + 1] = NIL_CONST
 		end
-		if #probeTable == ZERO_CONST then
-			return probeIndex
-		end
+		if #probeTable == ZERO_CONST then return probeIndex end
 
 		probeTable[probeIndex] = NIL_CONST
 		probeIndex = (probeIndex - 1) * 2
 		probeTable[probeIndex] = TRUE_CONST
 
-		if #probeTable == probeIndex then
-			continue
-		end
+		if #probeTable == probeIndex then continue end
 
 		probeTable[probeIndex] = NIL_CONST
 		probeIndex = probeIndex + 1
 		probeTable[probeIndex] = TRUE_CONST
 
-		if #probeTable == probeIndex then
-			continue
-		end
+		if #probeTable == probeIndex then continue end
 
 		probeTable[probeIndex] = NIL_CONST
 		probeIndex = probeIndex + 1
@@ -962,6 +957,9 @@ end
 local ClassMetatable = {
 	__index = function(self: proxy, key: any)
 		local properties = ProxyMap[self]
+		if key == "IsDestroyed" then
+			return properties == nil -- Returns true if the queue has been destroyed.
+		end
 		if properties == nil then error(`Attempted to access a destroyed object: {self} - {key}`, 2) end
 		if type(key) ~= "string" then error("Index must be a string.", 2) end
 
